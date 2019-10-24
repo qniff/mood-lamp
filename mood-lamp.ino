@@ -68,6 +68,10 @@ uint8_t current_time_minute;
 boolean settings = false;
 boolean sleeping = false;
 
+int r = 0;
+int g = 0;
+int b = 0;
+
 
 int      head  = 0, tail = -10; // Index of first 'on' and 'off' pixels
 uint32_t color = 0xFF0000;      // 'On' color (starts red)
@@ -148,93 +152,96 @@ void setup() { //Execute once during the launch of program
   sleep_alarm_minute = EEPROM.read(1);
   wake_alarm_hour =  EEPROM.read(2);
   wake_alarm_minute = EEPROM.read(3);
+//  night_lamp();
+  change_color(255, 0, 0);
 
 }
 
 void loop() {
+  change_color(0, 0, 255);
 
-  lightvalue = analogRead(A0); //Read the value form LDR
-
-  while (lightvalue > 800) //IF the room is very brigt (you can increase this values to make it glow even duringf day)
-  {
-    for (int i = 0; i <= 5; i++) //turn of all LED
-    {
-      strip.setBrightness(0); //by setting brightness to zero
-      strip.show();
-    }
-    lightvalue = analogRead(A0); //kepp checking if the room is getting darker
-    Serial.print("Too bright to glow: ");
-    Serial.println(lightvalue); //for debugging
-    Interactive_BT();  //Also check if the user is trying to access through bluetooth
-    delay(100);
-  }
-
-
-  settings = true; //if setting is true it means we have are ready to get into bluetooth control
-  //  Interactive_BT(); //Also check if the user is trying to access through bluetooth
-
-
-  t = rtc.now(); //get the current time
-  current_time_hour = t.hour(); //get hour value
-  current_time_minute = t.minute(); //get minute valued
-
-  if (t.second() % 5 == 0) //For every 5 seconds
-  {
-
-    colour_count++; //change the colour
-    if (colour_count >= 4) //if we exceed array count
-      colour_count = 0; //initialise the count
-
-    while (t.second() % 5 == 0) //wait till the 5th secound is over
-      t = rtc.now(); //update t.sec
-
-    //For Debugging
-    Serial.print ("Glowing clour: "); Serial.println(colour_count);
-    Serial.print("At time: "); Serial.print(t.hour()); Serial.print (" : "); Serial.println (t.minute());
-    Serial.print("Enviroment Brightness: "); Serial.println(lightvalue);
-    Serial.print("Wake up at :"); Serial.print(wake_alarm_hour); Serial.print (" : "); Serial.println (wake_alarm_minute);
-    Serial.print("Sleep at :"); Serial.print(sleep_alarm_hour); Serial.print (" : "); Serial.println (sleep_alarm_minute);
-    Serial.print ("Is Lamp sleeping? : "); Serial.println (sleeping);
-    Serial.println("                   ****                ");
-    //End of debugging lines
-
-    if (sleeping == false) //If we are not sleeping
-      glow_rainbow(colour_count); //dsplay the colours
-    if (sleeping == true) //if we are sleeping
-      night_lamp(); //display the night lamp effect
-
-    if (t.hour() >= 17) //During evening time
-    {
-      for (int i = 0; i <= 3; i++)
-      {
-        current_rainbow[i] = evening_rainbow[i];  //copy evening raninbow into current_rainbow
-        delay(100);
-      }
-    }
-    else //During Morning
-    {
-      for (int i = 0; i <= 3; i++)
-      {
-        current_rainbow[i] = morning_rainbow[i];  //copy  mornign rainboe into current rainbow
-        delay(100);
-      }
-    }
-
-  }
-
-
-
-  if (t.hour() == sleep_alarm_hour && t.minute() == sleep_alarm_minute) //If  the sleep time is meat
-  {
-    sleeping = true;  //get into sleeping mode
-    Serial.println("Lamp getting into Sleep Mode");
-  }
-
-  if (t.hour() == wake_alarm_hour && t.minute() == wake_alarm_minute) // If wake up time is meat
-  {
-    sleeping = false;  // get out of sleeping mode.
-    Serial.println("Lamp is up and ready");
-  }
+//  lightvalue = analogRead(A0); //Read the value form LDR
+//
+//  while (lightvalue > 800) //IF the room is very brigt (you can increase this values to make it glow even duringf day)
+//  {
+//    for (int i = 0; i <= 5; i++) //turn of all LED
+//    {
+//      strip.setBrightness(0); //by setting brightness to zero
+//      strip.show();
+//    }
+//    lightvalue = analogRead(A0); //kepp checking if the room is getting darker
+//    Serial.print("Too bright to glow: ");
+//    Serial.println(lightvalue); //for debugging
+//    Interactive_BT();  //Also check if the user is trying to access through bluetooth
+//    delay(100);
+//  }
+//
+//
+//  settings = true; //if setting is true it means we have are ready to get into bluetooth control
+//  //  Interactive_BT(); //Also check if the user is trying to access through bluetooth
+//
+//
+//  t = rtc.now(); //get the current time
+//  current_time_hour = t.hour(); //get hour value
+//  current_time_minute = t.minute(); //get minute valued
+//
+//  if (t.second() % 5 == 0) //For every 5 seconds
+//  {
+//
+//    colour_count++; //change the colour
+//    if (colour_count >= 4) //if we exceed array count
+//      colour_count = 0; //initialise the count
+//
+//    while (t.second() % 5 == 0) //wait till the 5th secound is over
+//      t = rtc.now(); //update t.sec
+//
+//    //For Debugging
+//    Serial.print ("Glowing clour: "); Serial.println(colour_count);
+//    Serial.print("At time: "); Serial.print(t.hour()); Serial.print (" : "); Serial.println (t.minute());
+//    Serial.print("Enviroment Brightness: "); Serial.println(lightvalue);
+//    Serial.print("Wake up at :"); Serial.print(wake_alarm_hour); Serial.print (" : "); Serial.println (wake_alarm_minute);
+//    Serial.print("Sleep at :"); Serial.print(sleep_alarm_hour); Serial.print (" : "); Serial.println (sleep_alarm_minute);
+//    Serial.print ("Is Lamp sleeping? : "); Serial.println (sleeping);
+//    Serial.println("                   ****                ");
+//    //End of debugging lines
+//
+//    if (sleeping == false) //If we are not sleeping
+//      glow_rainbow(colour_count); //dsplay the colours
+//    if (sleeping == true) //if we are sleeping
+//      night_lamp(); //display the night lamp effect
+//
+//    if (t.hour() >= 17) //During evening time
+//    {
+//      for (int i = 0; i <= 3; i++)
+//      {
+//        current_rainbow[i] = evening_rainbow[i];  //copy evening raninbow into current_rainbow
+//        delay(100);
+//      }
+//    }
+//    else //During Morning
+//    {
+//      for (int i = 0; i <= 3; i++)
+//      {
+//        current_rainbow[i] = morning_rainbow[i];  //copy  mornign rainboe into current rainbow
+//        delay(100);
+//      }
+//    }
+//
+//  }
+//
+//
+//
+//  if (t.hour() == sleep_alarm_hour && t.minute() == sleep_alarm_minute) //If  the sleep time is meat
+//  {
+//    sleeping = true;  //get into sleeping mode
+//    Serial.println("Lamp getting into Sleep Mode");
+//  }
+//
+//  if (t.hour() == wake_alarm_hour && t.minute() == wake_alarm_minute) // If wake up time is meat
+//  {
+//    sleeping = false;  // get out of sleeping mode.
+//    Serial.println("Lamp is up and ready");
+//  }
 
 
 
@@ -361,18 +368,33 @@ void night_lamp()
     }
     delay(300);
   }
-  for (int j = 254; j >= 240; j--) //decrease the brightness to create dim effect
-  {
+}
+
+void change_color(int green, int red, int blue)
+{
+
+  while ( r != red || g != green || b != blue ) {
+    if ( r < red ) r += 1;
+    if ( r > red ) r -= 1;
+
+    if ( g < green ) g += 1;
+    if ( g > green ) g -= 1;
+
+    if ( b < blue ) b += 1;
+    if ( b > blue ) b -= 1;
+
+    for (int i = 0; i <= 30; i++) //do it for all leds
     {
-      for (int i = 0; i <= 5; i++) //do it for all 5 leds
-      {
-        strip.setPixelColor(i, 255 - j, 0, 255 - j);
-        strip.show();
-      }
-      delay(300);
+      strip.setPixelColor(i, r, g, b);
+      strip.show();
     }
   }
+  
+
+    
 }
+
+
 
 void test_lamp()
 {
