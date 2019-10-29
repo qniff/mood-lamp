@@ -21,8 +21,6 @@ DateTime t;
 SoftwareSerial Bluetooth(4, 2); // RX, TX
 
 //GLOBAL variables
-char input;
-bool autoColorEnabled = false;
 String alarmHour;
 String alarmMinute;
 bool alarmEnabled = false;
@@ -236,11 +234,6 @@ void setMinute(String text){
     Serial.println("Use 'alarm' command to turn it off (Helpful in the morning)");
 }
 
-void autoColor(){
-
-
-}
-
 void changeColor(int green, int red, int blue)
 {
   rainbowEnabled = false;
@@ -260,10 +253,6 @@ void changeColor(int green, int red, int blue)
       strip.show();
     }
   }
-}
-void waitForReply() //Function to wait for user to enter value for BT
-{
-  Serial.flush(); while (!Serial.available());
 }
 
 void doAlarm(){
