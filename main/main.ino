@@ -3,9 +3,12 @@
 #include <Adafruit_DotStar.h> //Library for Neo Pixel (Download from Link in article)
 #include <SPI.h> //Library for SPI communication (Pre-Loaded into Arduino)
 #include <EEPROM.h> //Library for EEPROM (Pre-Loaded into Arduino)
+#include <ctype.h>
+#include "Time.h"
 
 #define NUMPIXELS 30
 
+#define BUZZERPIN 9
 #define DATAPIN 6
 #define CLOCKPIN 11
 #define MAX_INPUT 50
@@ -18,14 +21,31 @@ DateTime t;
 SoftwareSerial Bluetooth(4, 2); // RX, TX
 
 //GLOBAL variables
-char incoming; //store value form Bluetooth
-int lightvalue = 0; //LDR output vale
-int colour_count = 0; //to increment array
+char input;
+bool autoColorEnabled = false;
+String alarmHour;
+String alarmMinute;
+bool alarmEnabled = false;
+bool rainbowEnabled = false;
+bool settingHour = false;
+bool settingMinute = false;
+bool buzzing = false;
+int colour_count = 0;
 
 //main color of strip
 int r = 0;
 int g = 0;
 int b = 0;
+
+//melody
+int length = 15; // the number of notes
+char notes[] = "ccggaagffeeddc "; // a space represents a rest
+int beats[] = { 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 4 };
+int tempo = 300;
+
+int      head  = 0, tail = -10;
+uint32_t color = 0xFF0000;      // 'On' color (starts red)
+
 
 
 void setup() { //Execute once during the launch of program
@@ -33,21 +53,49 @@ void setup() { //Execute once during the launch of program
   #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000L)
     clock_prescale_set(clock_div_1); // Enable 16 MHz on Trinket
   #endif
+
+  pinMode(BUZZERPIN, OUTPUT);
   
   rtc.begin();
-
-  Bluetooth.begin(9600);
+  
   Serial.begin(9600);
-
+  delay(3000);
+  
+  if (!rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
+  
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  
+  if (rtc.lostPower()) {
+    Serial.println("RTC lost power, lets set the time!");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+  
   strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
-
+  strip.show();
   changeColor(0, 0, 0);
+  
   printInfo();
+  
+
 }
 
 void loop() {
+
   handleBluetooth();
+
+  if(rainbowEnabled){
+    DateTime now = rtc.now();
+    if(now.second()%5 == 0){
+      rainbow();
+    }
+  }
+
+  if(alarmEnabled){
+    doAlarm();
+  }
 }
 
 
@@ -58,13 +106,24 @@ void handleBluetooth(){
 
     if (Serial.available () > 0)
     {
-      char inByte = Serial.read ();
+      char inByte = Serial.read();
       switch (inByte)
       {
         case '\n':   // end of text
           input_line [input_pos] = 0;  // terminating null byte
           
           // terminator reached! process input_line here ...
+          
+          if(settingMinute){
+            Serial.println("Setting minute");
+            setMinute(input_line);
+          }
+
+          if(settingHour){
+            Serial.println("Setting hour");
+            setHour(input_line);
+          }
+
           executeCommand(input_line);
           
           // reset buffer for next time
@@ -85,58 +144,58 @@ void handleBluetooth(){
 
 
 void executeCommand(String text){
-  if(text == "auto"){
-    Serial.println("Some RTC stuff will happen in here");
-  }
-  
   if(text == "alarm"){
-    Serial.println("Some alarm stuff might happen in here");
     handleAlarm();
   }
   
   if(text == "red"){
+    Serial.println("\nChanging to red..");
     changeColor(255, 0, 0);
-    Serial.println("Changing to red..");
   }
   
   if(text == "green"){
+    Serial.println("\nChanging to green..");
     changeColor(0, 255, 0);
-    Serial.println("Changing to green..");
   }
     
   if(text == "blue"){
+    Serial.println("\nChanging to blue..");
     changeColor(0, 0, 255);
-    Serial.println("Changing to blue..");
   }  
   
   if(text == "purple"){
+    Serial.println("\nChanging to purple..");
     changeColor(128, 0, 128);
-    Serial.println("Changing to purple..");
   }
   
   if(text == "pink"){
+    Serial.println("\nChanging to pink..");
     changeColor(255, 192, 203);
-    Serial.println("Changing to pink..");
   }
   
   if(text == "purple"){
+    Serial.println("\nChanging to purple..");
     changeColor(128, 0, 128);
-    Serial.println("Changing to purple..");
   }   
   
   if(text == "yellow"){
+    Serial.println("\nChanging to yellow..");
     changeColor(255, 255, 0);
-    Serial.println("Changing to yellow..");
   }
 
   if(text == "cyan"){
+    Serial.println("\nChanging to cyan..");
     changeColor(0, 255, 255);
-    Serial.println("Changing to cyan..");
   }
   
    if(text == "orange"){
+    Serial.println("\nChanging to orange..");
     changeColor(255, 165, 0);
-    Serial.println("Changing to cyan..");
+  }  
+
+   if(text == "rainbow"){
+    Serial.println("\nChanging to rainbow..");
+    rainbowEnabled = true;
   }
   
   if(text == "help"){
@@ -145,17 +204,46 @@ void executeCommand(String text){
 
    if(text == "off"){
     changeColor(0, 0, 0);
-    Serial.println("Turning off..");
+    Serial.println("\nTurning off..");
   }
 }
 
 void handleAlarm(){
-    Serial.println("Alarm menu:");
-    Serial.println("Alarm menu:");
+    if(alarmEnabled){
+      alarmEnabled = false;
+      Serial.println("\nAlarm is unset");
+      return;
+    }
+    Serial.println("\nAlarm menu:");
+    Serial.println("What hour do you want to wake up? (24h):");
+    settingHour = true;
+    handleBluetooth();
+}
+
+void setHour(String text){
+    alarmHour = text;
+    Serial.println("\nWhat minute do you want to wake up?");
+    settingHour = false;
+    settingMinute = true;
+    handleBluetooth();
+}
+
+void setMinute(String text){
+    alarmMinute = text;
+    settingMinute = false;
+    alarmEnabled = true;
+    Serial.println("\nAlarm is set to " + alarmHour + ":" + alarmMinute);
+    Serial.println("Use 'alarm' command to turn it off (Helpful in the morning)");
+}
+
+void autoColor(){
+
+
 }
 
 void changeColor(int green, int red, int blue)
 {
+  rainbowEnabled = false;
   while ( r != red || g != green || b != blue ) {
     if ( r < red ) r += 1;
     if ( r > red ) r -= 1;
@@ -173,12 +261,81 @@ void changeColor(int green, int red, int blue)
     }
   }
 }
+void waitForReply() //Function to wait for user to enter value for BT
+{
+  Serial.flush(); while (!Serial.available());
+}
+
+void doAlarm(){
+  DateTime now = rtc.now();
+  String hour = String(now.hour(), DEC);
+  String minute = String(now.minute(), DEC);
+  if((hour == alarmHour) && (minute == alarmMinute)){
+    Serial.println("!!!ALARM!!!");
+    playMelody();
+  }
+}
+
+void playMelody(){
+  for (int i = 0; i < length; i++) {
+    if (notes[i] == ' ') {
+      delay(beats[i] * tempo); // rest
+    } else {
+      playNote(notes[i], beats[i] * tempo);
+    }
+
+    // pause between notes
+    delay(tempo / 2); 
+  }
+}
+
+void playNote(char note, int duration) {
+  char names[] = { 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'C' };
+  int tones[] = { 1915, 1700, 1519, 1432, 1275, 1136, 1014, 956 };
+
+  // play the tone corresponding to the note name
+  for (int i = 0; i < 8; i++) {
+    if (names[i] == note) {
+      playTone(tones[i], duration);
+    }
+  }
+}
+
+void playTone(int tone, int duration) {
+  for (long i = 0; i < duration * 1000L; i += tone * 2) {
+    digitalWrite(BUZZERPIN, HIGH);
+    delayMicroseconds(tone);
+    digitalWrite(BUZZERPIN, LOW);
+    delayMicroseconds(tone);
+  }
+}
+
+void rainbow()
+{
+  for(int x = 0; x < NUMPIXELS * 3; x++){
+
+    strip.setPixelColor(head, color); // 'On' pixel at head
+    strip.setPixelColor(tail, 0);     // 'Off' pixel at tail
+    strip.show();                     // Refresh strip
+    delay(30);                        // Pause 20 milliseconds (~50 FPS)
+  
+    if(++head >= NUMPIXELS) {         // Increment head index.  Off end of strip?
+      head = 0;                       //  Yes, reset head index to start
+      if((color >>= 8) == 0)          //  Next color (R->G->B) ... past blue now?
+        color = 0xFF0000;             //   Yes, reset to red
+    }
+    if(++tail >= NUMPIXELS) tail = 0; // Increment, reset tail index
+  }
+  
+}
 
 void printInfo()
 {
-    Serial.println("Available commands: ");
-    Serial.println("Colors: auto, red, green, blue, purple, yellow, cyan, orange, off");
+    Serial.println("\nAvailable commands: ");
+    Serial.println("Color: rainbow, red, green, blue, purple, yellow, cyan, orange, off");
     Serial.println("Other: alarm, help");
 }
+
+ 
 
  
