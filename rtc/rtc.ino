@@ -1,5 +1,6 @@
 // Date and time functions using a DS3231 RTC connected via I2C and Wire lib
 #include "RTClib.h"
+#include "Time.h"
 
 RTC_DS3231 rtc;
 DateTime t;
@@ -17,6 +18,9 @@ void setup () {
     Serial.println("Couldn't find RTC");
     while (1);
   }
+
+  
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   if (rtc.lostPower()) {
     Serial.println("RTC lost power, lets set the time!");
