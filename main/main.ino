@@ -86,7 +86,7 @@ void loop() {
 
   if(rainbowEnabled){
     DateTime now = rtc.now();
-    if(now.second()%5 == 0){
+    if(now.second()%2 == 0){
       rainbow();
     }
   }
@@ -204,6 +204,10 @@ void executeCommand(String text){
     changeColor(0, 0, 0);
     Serial.println("\nTurning off..");
   }
+
+   if(text == "melody"){
+    playMelody();
+  }
 }
 
 void handleAlarm(){
@@ -261,6 +265,8 @@ void doAlarm(){
   String minute = String(now.minute(), DEC);
   if((hour == alarmHour) && (minute == alarmMinute)){
     Serial.println("!!!ALARM!!!");
+    executeCommand("red");
+    rainbowEnabled = true;
     playMelody();
   }
 }
@@ -322,7 +328,7 @@ void printInfo()
 {
     Serial.println("\nAvailable commands: ");
     Serial.println("Color: rainbow, red, green, blue, purple, yellow, cyan, orange, off");
-    Serial.println("Other: alarm, help");
+    Serial.println("Other: alarm, melody, help");
 }
 
  
